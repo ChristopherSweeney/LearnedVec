@@ -1,7 +1,7 @@
 import sys
 import ctypes 
   
-class DynamicArray(object): 
+class LearnedDynamicArray(object): 
     ''' 
     DYNAMIC ARRAY CLASS (Similar to Python List) 
     '''
@@ -10,6 +10,7 @@ class DynamicArray(object):
         self.n = 0 # Count actual elements (Default is 0) 
         self.capacity = capacity # Default Capacity 
         self.A = self.make_array(self.capacity) 
+        self.history=[]
           
     def __len__(self): 
         """ 
@@ -35,6 +36,7 @@ class DynamicArray(object):
         	return None
         ele = self.A[self.n-1]
         self.n-=1
+        self.history.append(self.n)
         if 4*self.n < self.capacity: 
             # halve capacity
             self._resize(1/2 * self.capacity)  
@@ -50,6 +52,7 @@ class DynamicArray(object):
           
         self.A[self.n] = ele # Set self.n index to element 
         self.n += 1
+        self.history.append(self.n)
           
     def _resize(self, new_cap): 
         """ 
@@ -69,3 +72,5 @@ class DynamicArray(object):
         Returns a new array with new_cap capacity 
         """
         return (new_cap * ctypes.py_object)() 
+    def
+
