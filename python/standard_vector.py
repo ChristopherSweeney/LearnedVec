@@ -28,17 +28,17 @@ class DynamicArray(object):
         return self.A[k] # Retrieve from the array at index k 
     
     def pop(self):
-    	""" 
+        """ 
         Remove element from the end of the array 
         """
         if self.n<1:
-        	return None
+            return None
         ele = self.A[self.n-1]
         self.n-=1
         if 4*self.n < self.capacity: 
             # halve capacity
-            self._resize(1/2 * self.capacity)  
- 		return ele
+            self._resize(int(1/2 * self.capacity))
+        return ele
     
     def append(self, ele): 
         """ 
@@ -69,3 +69,23 @@ class DynamicArray(object):
         Returns a new array with new_cap capacity 
         """
         return (new_cap * ctypes.py_object)() 
+
+if __name__ == '__main__':
+    arr = DynamicArray()
+
+    print("\ntesting appending\n")
+    for i in range(100):
+        print(i)
+        print(arr.append(i))
+        print("capacity: ", arr.capacity)
+        print("size: ", len(arr))
+
+    print("\ntesting popping\n")
+    for i in range(100):
+        e = arr.pop()
+        print(e)
+        print("capacity: ", arr.capacity)
+        print("size: ", len(arr))
+
+
+
