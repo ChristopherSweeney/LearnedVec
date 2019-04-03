@@ -35,9 +35,9 @@ class DynamicArray(object):
             return None
         ele = self.A[self.n-1]
         self.n-=1
-        if 4*self.n < self.capacity: 
+        if 4*self.n < self.capacity and self.capacity>1: 
             # halve capacity
-            self._resize(int(1/2 * self.capacity))
+            self._resize(int(1/2. * self.capacity))
         return ele
     
     def append(self, ele): 
@@ -47,7 +47,6 @@ class DynamicArray(object):
         if self.n == self.capacity: 
             # Double capacity if not enough room 
             self._resize(2 * self.capacity)  
-          
         self.A[self.n] = ele # Set self.n index to element 
         self.n += 1
           
@@ -57,7 +56,6 @@ class DynamicArray(object):
         """
           
         B = self.make_array(new_cap) # New bigger array 
-          
         for k in range(self.n): # Reference all existing values 
             B[k] = self.A[k] 
               
@@ -76,7 +74,7 @@ if __name__ == '__main__':
     print("\ntesting appending\n")
     for i in range(100):
         print(i)
-        print(arr.append(i))
+        arr.append(i)
         print("capacity: ", arr.capacity)
         print("size: ", len(arr))
 

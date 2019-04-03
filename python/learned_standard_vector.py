@@ -10,7 +10,9 @@ class LearnedDynamicArray(object):
         self.n = 0 # Count actual elements (Default is 0) 
         self.capacity = capacity # Default Capacity 
         self.A = self.make_array(self.capacity) 
-        self.history=[]
+        self.history_n=[]
+        self.history_capacity=[]
+
           
     def __len__(self): 
         """ 
@@ -28,6 +30,11 @@ class LearnedDynamicArray(object):
           
         return self.A[k] # Retrieve from the array at index k 
     
+    def update_history(self):
+        self.history_n.append(self.n)
+        self.history_capacity.append(self.capacity)
+
+
     def pop(self):
         """ 
         Remove element from the end of the array 
@@ -36,10 +43,10 @@ class LearnedDynamicArray(object):
             return None
         ele = self.A[self.n-1]
         self.n-=1
-        self.history.append(self.n)
-        if 4*self.n < self.capacity: 
+        self.update_history()
+        if 4*self.n < self.capacity and self.capacity>1: 
             # halve capacity
-            self._resize(int(1/2 * self.capacity))
+            self._resize(int(1/2. * self.capacity))
         return ele
     
     def append(self, ele): 
@@ -49,10 +56,10 @@ class LearnedDynamicArray(object):
         if self.n == self.capacity: 
             # Double capacity if not enough room 
             self._resize(2 * self.capacity)  
-          
         self.A[self.n] = ele # Set self.n index to element 
         self.n += 1
-        self.history.append(self.n)
+        self.update_history()
+
           
     def _resize(self, new_cap): 
         """ 
@@ -60,7 +67,6 @@ class LearnedDynamicArray(object):
         """
           
         B = self.make_array(new_cap) # New bigger array 
-          
         for k in range(self.n): # Reference all existing values 
             B[k] = self.A[k] 
               
@@ -79,7 +85,7 @@ if __name__ == '__main__':
     print("\ntesting appending\n")
     for i in range(100):
         print(i)
-        print(arr.append(i))
+        arr.append(i)
         print("capacity: ", arr.capacity)
         print("size: ", len(arr))
 
@@ -89,5 +95,6 @@ if __name__ == '__main__':
         print(e)
         print("capacity: ", arr.capacity)
         print("size: ", len(arr))
+
 
 
