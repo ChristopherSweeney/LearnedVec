@@ -4,7 +4,7 @@ import numpy
 from igraph import *
 import cProfile
 import matplotlib.pyplot as plt
-
+import networkx as nx
 
 # def generate_gaussian_queries_append(num):
 
@@ -20,7 +20,7 @@ def dfs_iterative(graph, start, stack):
         if vertex in path:
             continue
         path.append(vertex)
-        for neighbor in graph[vertex]:
+        for neighbor in nx.all_neighbors(graph,vertex):
             stack.append(neighbor)
     return path
 
@@ -40,31 +40,28 @@ if __name__ == '__main__':
     #     print("capacity: ", arr.capacity)
     #     print("size: ", len(arr))
 
-    # adjacency_matrix = {1: [2, 3], 2: [4, 5],
-    #                 3: [5], 4: [6], 5: [6],
-    #                 6: [7], 7: []}
-
-    #generate random graph
-    #could also use code at https://networkx.github.io/documentation/networkx-1.10/reference/generators.html
-    edges=1000
-    prob_thresh=.70
-    adj = numpy.random.rand(edges, edges)
-    adj[adj > prob_thresh] = 1 # sets everything over 0.999 to 1
-    adj[adj <= prob_thresh] = 0 # sets everything below to 0
-    graph = Graph.Adjacency(list(adj))
-    # print graph
+  
+    # er=nx.erdos_renyi_graph(100,0.15)
+    # ws=nx.watts_strogatz_graph(10000,3,0.1)
+    # tree = nx.balanced_tree(2,10)
+    complete = nx.complete_graph(100)
+    # ba=nx.barabasi_albert_graph(100,5)
+    # red=nx.random_lobster(100,0.9,0.9)    
+    nx.draw(complete)
+    plt.show()
+    graph = complete
     print "----------------------------testing regular stack----------------------------"
     regular_stack = DynamicArray()
     cp = cProfile.Profile()
     cp.enable()
-    answer = dfs_iterative(graph.get_adjlist(), 1,regular_stack)
+    answer = dfs_iterative(graph, 1,regular_stack)
     cp.disable()
     cp.print_stats()
     print "----------------------------testing learned stack----------------------------"
     learned_stack = LearnedDynamicArray()
     cp = cProfile.Profile()
     cp.enable()
-    answer = dfs_iterative(graph.get_adjlist(), 1,learned_stack)
+    answer = dfs_iterative(graph, 1,learned_stack)
     cp.disable()
     cp.print_stats()
     plt.figure()
@@ -72,5 +69,4 @@ if __name__ == '__main__':
     plt.plot(learned_stack.history_capacity)
     plt.show()
     # print answer
-	#[1, 3, 5, 6, 7, 2, 4]
 
