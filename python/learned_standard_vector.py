@@ -1,18 +1,28 @@
 import sys
 import ctypes 
-  
+from math import sqrt
+from numpy import split
+from numpy import array
+from pandas import read_csv
+from sklearn.metrics import mean_squared_error
+from matplotlib import pyplot
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import LSTM
+
 class LearnedDynamicArray(object): 
     ''' 
     DYNAMIC ARRAY CLASS (Similar to Python List) 
     '''
       
-    def __init__(self,capacity=1): 
+    def __init__(self,capacity=1,LSTM_model=None): 
         self.n = 0 # Count actual elements (Default is 0) 
         self.capacity = capacity # Default Capacity 
         self.A = self.make_array(self.capacity) 
         self.history_n=[]
         self.history_capacity=[]
-
+        self.LSTM_model = LSTM_model
           
     def __len__(self): 
         """ 
@@ -33,7 +43,6 @@ class LearnedDynamicArray(object):
     def update_history(self):
         self.history_n.append(self.n)
         self.history_capacity.append(self.capacity)
-
 
     def pop(self):
         """ 
