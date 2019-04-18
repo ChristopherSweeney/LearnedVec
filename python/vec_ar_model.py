@@ -12,6 +12,9 @@ from keras.layers import Flatten
 from keras.layers import TimeDistributed
 from keras.preprocessing.sequence import pad_sequences
 from statsmodels.tsa.arima_model import ARIMA
+from pandas import Series
+from statsmodels.tsa.ar_model import AR
+from sklearn.metrics import mean_squared_error
 
 def create_dataset(data,prediction_horizon=20,padding_len=200):
     data_y = np.zeros((len(data),padding_len))
@@ -62,21 +65,6 @@ def dfs_iterative(graph, start, stack):
     return path
 
 if __name__ == '__main__':
-    # arr = DynamicArray()
-    # print("\ntesting appending\n")
-    # for i in range(100):
-    #     print(i)
-    #     print(arr.append(i))
-    #     print("capacity: ", arr.capacity)
-    #     print("size: ", len(arr))
-
-    # print("\ntesting popping\n")
-    # for i in range(100):
-    #     e = arr.pop()
-    #     print(e)
-    #     print("capacity: ", arr.capacity)
-    #     print("size: ", len(arr))
-
   
     # # er=nx.erdos_renyi_graph(100,0.15)
     # # ws=nx.watts_strogatz_graph(10000,3,0.1)
@@ -99,16 +87,23 @@ if __name__ == '__main__':
     padding_len = 200
     train = []
     for i in range(num_epochs):
-        graph = nx.random_lobster(100,0.9,0.9)
+        graph = nx.complete_graph(100)
         learned_stack = LearnedDynamicArray()
         answer = dfs_iterative(graph, 1,learned_stack)
         train.append(learned_stack.history_n)
-    train_x,train_y = create_dataset(train,prediction_horizon=20)
-    print np.shape(train_x),np.shape(train_y)
-    model = build_lstm_model(np.expand_dims(train_x,2),np.expand_dims(train_y,2), batch_size=2, num_epochs=10,verbose=0)
-    predict= model.predict(pad_sequences([train[-1]],maxlen=padding_len))
-    print predict
-
+    # train_x,train_y = create_dataset(train,prediction_horizon=20)
+    model = AR(train[0])
+    model_fit = model.fit()
+    print('Lag: %s' % model_fit.k_ar)
+    print('Coefficients: %s' % model_fit.params)
+    predictions = model_fit.predict(start=45, end=len(train[0]), dynamic=True)
+    print predictions
+    # error = mean_squared_error(train[45:100], predictions)
+    # print('Test MSE: %.3f' % error)
+    # plot results
+    plt.plot(train[0])
+    plt.plot(predictions, color='red')
+    plt.show()
     # complete = nx.complete_graph(100)
     # cp = cProfile.Profile()
     # cp.enable()
