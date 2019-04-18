@@ -6,51 +6,51 @@ import cProfile
 import matplotlib.pyplot as plt
 import networkx as nx
 from scipy.signal import find_peaks
+from sklearn.svm import SVR
 
-def create_dataset(data,buckets=10): #data [history_n], history_n :[1,2,3]
-    data_y = []
-    data_x = []
+#samples per graph greater than graph duration???
+def create_dataset(data,buckets=50,samples_per_graph =100): #data [history_n], history_n :[1,2,3]
+    data_y = np.zeros(len(data)*samples_per_graph)
+    data_x = np.zeros((len(data)*samples_per_graph,buckets))
     for i,graph_hist in enumerate(data):
         print "ingesting graph "+str(i)
-        x,y = convert_training_graph_history(graph_hist,buckets)
-        data_y.extend(y)
-        data_x.extend(x)
-    return data_x, data_y
+        x,y,choices = convert_training_graph_history(graph_hist,buckets,samples_per_graph)
+        data_y[i*samples_per_graph:i*samples_per_graph+samples_per_graph]= y
+        data_x[i*samples_per_graph:i*samples_per_graph+samples_per_graph,:]= x
+    return data_x.astype(np.float64), data_y.astype(np.float64),choices
 
-def convert_training_sample(graph_hist,sample,buckets):
-    if sample<buckets: return None,None
-    prev = graph_hist[:sample]
-    bucket_size = int(len(prev) / buckets)
-    print "sample ",sample
-    print "bucket_size", bucket_size
-    pad_size = bucket_size - int(len(prev) % buckets)
-    pad = [0] * pad_size
-    prev.extend(pad)
-    splits = np.split(np.array(prev), bucket_size)
-    x= np.max(splits, axis=1)
-    y = max(graph_hist[sample:min(sample*2,len(graph_hist))])
-    return x,y
-
-# def convert_training_sample(graph_hist,sample,buckets):
-#     bucket_size = graph_hist[sample]/buckets 
-#     print bucket_size
-#     if sample<bucket_size: return None,None
-#     bounds = [(i*bucket_size,i*bucket_size+bucket_size) for i in range(buckets)]
-#     print bounds
-#     y = max(graph_hist[sample:min(sample*2,len(graph_hist))])
-#     x = np.array(map(lambda i: max(graph_hist[i[0]:i[1]]),bounds))
-#     return x,y
-
+# per graph
 def convert_training_graph_history(graph_hist,buckets,num_samples=100):
-    x=[]
-    y=[]
-    indicies = np.random.choice(graph_hist,num_samples,replace=False)
-    for sample in indicies:
+    y = np.zeros(num_samples)
+    x = np.zeros((num_samples,buckets))
+    indicies = np.random.choice(np.arange(len(graph_hist))[1:],num_samples,replace=False) #must have more data than samples
+    for i,sample in enumerate(indicies):
         x_1,y_1 = convert_training_sample(graph_hist,sample,buckets)
-        if not x_1 is None:
-            x.append(x_1)
-            y.append(y_1)
+        x[i,:] = x_1
+        y[i] = y_1
+    return x,y,indicies
+
+# per sample
+def convert_training_sample(graph_hist,sample,buckets):
+    prev = graph_hist[:sample]
+    x,y = None,None
+    if sample>=buckets:
+        bucket_size = int(sample / buckets)
+        x = max_buckets(prev[sample%buckets:], buckets)
+    else:
+        x = np.zeros((buckets))
+        x[buckets - sample:] = np.array(prev)
+    y = get_y(graph_hist,sample)
     return x,y
+
+def max_buckets(array, buckets):
+    splits = np.split(np.array(array), buckets)
+    x = np.max(splits, axis=1)
+    return x
+
+def get_y(graph_hist,sample):
+    return max(graph_hist[sample:min(sample*2,len(graph_hist)-1)])
+
 #taken from https://www.koderdojo.com/blog/depth-first-search-in-python-recursive-and-non-recursive-programming
 def dfs_iterative(graph, start, stack):
     path =  []
@@ -65,7 +65,6 @@ def dfs_iterative(graph, start, stack):
     return path
 
 if __name__ == '__main__':
-
     # # er=nx.erdos_renyi_graph(100,0.15)
     # # ws=nx.watts_strogatz_graph(10000,3,0.1)
     # # tree = nx.balanced_tree(2,10)
@@ -84,19 +83,30 @@ if __name__ == '__main__':
     # cp.print_stats()
     print "----------------------------testing learned stack----------------------------"
     train = []
-    num_epochs = 5
+    num_epochs = 1
     for i in range(num_epochs):
-        graph = nx.random_lobster(100,0.9,0.9)  
+        graph = nx.random_lobster(100,0.9,0.9)
+        nx.draw(graph)
+        plt.show()
         learned_stack = LearnedDynamicArray()
         answer = dfs_iterative(graph, 1,learned_stack)
         train.append(learned_stack.history_n)
-        # plt.figure()
-        # plt.plot(learned_stack.history_n)
-        # plt.plot(learned_stack.history_capacity)
-        # plt.show()
+        #regress on mulitplicitve factor
+        #decay factor
+        train_x,train_y,choices = create_dataset(train)
+        print train_x[0], train_y[0]
+        clf = SVR( C=1.0, epsilon=0.2)
+        clf.fit(train_x, train_y)
+        predictions = clf.predict([train_x[0]])
 
-    train_x,train_y = create_dataset(train)
-    print train_x,train_y
+        plt.figure()
+        plt.plot(learned_stack.history_n)
+        plt.plot(learned_stack.history_capacity)
+        plt.scatter(np.arange(len(train_x[0]))*choices[0]/50,train_x[0],color="g")
+        plt.scatter(choices[0], train_y[0],color="r")
+        plt.scatter(choices[0], predictions,color="b")
+        plt.show()
+
     # print np.shape(train_x),np.shape(train_y)
     # model = build_lstm_model(np.expand_dims(train_x,2),np.expand_dims(train_y,2), batch_size=2, num_epochs=10,verbose=0)
     # predict= model.predict(pad_sequences([train[-1]],maxlen=padding_len))
