@@ -7,7 +7,7 @@ class LearnedDynamicArray(object):
     DYNAMIC ARRAY CLASS (Similar to Python List) 
     '''
       
-    def __init__(self,capacity=1,model=None,buckets = 10): 
+    def __init__(self,capacity=1,model=None,buckets = 10,default_resize_up = 2,default_resize_down=0.5,default_downsize_point=.25): 
         self.n = 0 # Count actual elements (Default is 0) 
         self.capacity = capacity # Default Capacity 
         self.A = self.make_array(self.capacity) 
@@ -17,6 +17,9 @@ class LearnedDynamicArray(object):
         self.buckets = buckets
         self.prediction_points=[]
         self.prediction_vals=[]
+        self.default_resize_up = default_resize_up
+        self.default_resize_down=default_resize_down
+        self.default_downsize_point=default_downsize_point
 
     def __len__(self): 
         """ 
@@ -38,6 +41,10 @@ class LearnedDynamicArray(object):
         self.history_n.append(self.n)
         self.history_capacity.append(self.capacity)
 
+    def update_prediction_history(self,vals,horizon):
+        self.prediction_points.append(horizon)
+        self.prediction_vals.append(vals)
+
     def pop(self):
         """ 
         Remove element from the end of the array 
@@ -47,16 +54,20 @@ class LearnedDynamicArray(object):
         ele = self.A[self.n-1]
         self.n-=1
         self.update_history()
-        if 4*self.n < self.capacity and self.capacity>1: 
+
+        if self.n < int(self.default_downsize_point * self.capacity) and self.capacity>1: 
             if not self.model:
-                self._resize(int(1/2. * self.capacity))
+                self._resize(int(self.default_resize_down * self.capacity))
             else:
-                horizon =self.predict_horizon()
-                if self.n >= int(horizon)+2:
-                    self._resize(1/2 * self.capacity)
-                    print "error"
+                horizon = self.predict_horizon()*self.n
+                print "horizin ", horizon
+                print "capacity", self.capacity
+                print "n ", self.n
+                if self.capacity > int(horizon) and self.n < int(horizon): # horizon is lower
+                    self._resize(int(horizon))#buffer
                 else:
-                    self._resize(int(horizon)+2)#buffer
+                    self._resize(int(self.default_resize_down * self.capacity))
+                    print "error"
         return ele
 
     def predict_horizon(self):
@@ -64,11 +75,13 @@ class LearnedDynamicArray(object):
         size = len(history)
         if size>=self.buckets:
             bucket_size = int(size / self.buckets)
-            x = self.max_buckets(history[size%self.buckets:])
+            x = self.max_buckets(history[size%self.buckets:])/float(self.n+1)#hacky
         else:
             x = np.zeros((self.buckets))
-            x[self.buckets - size:] = np.array(self.history_n)
-        return self.model.predict([x])
+            x[self.buckets - size:] = np.array(self.history_n)/float(self.n+1)
+        prediction = self.model.predict(np.expand_dims(np.expand_dims(x,0),2))
+        self.update_prediction_history(x,prediction)
+        return prediction
 
     def max_buckets(self,array):
         splits = np.split(np.array(array), self.buckets)
@@ -81,18 +94,18 @@ class LearnedDynamicArray(object):
         """
         if self.n == self.capacity: 
             if not self.model:
-                self._resize(2 * self.capacity)
+                self._resize(int(self.default_resize_up * self.capacity))
             else:
-                horizon = self.predict_horizon()
+                horizon = self.predict_horizon()*self.n
                 print "horizin ", horizon
                 print "capacity", self.capacity
                 print "n ", self.n
 
-                if self.n >= int(horizon)+2:
-                    self._resize(2 * self.capacity)
+                if self.n >= int(horizon):
+                    self._resize(int(self.default_resize_up * self.capacity))
                     print "error"
                 else:
-                    self._resize(int(horizon)+2)#buffer
+                    self._resize(int(horizon))
 
         self.A[self.n] = ele # Set self.n index to element 
         self.n += 1

@@ -44,13 +44,16 @@ def convert_training_graph_history(graph_hist,buckets,num_samples=100):
 def convert_training_sample(graph_hist,sample,buckets):
     prev = graph_hist[:sample]
     x,y = None,None
+    n = float(graph_hist[sample])
     if sample>=buckets:
         bucket_size = int(sample / buckets)
         x = max_buckets(prev[sample%buckets:], buckets)
+        x = x / (n+1)
     else:
         x = np.zeros((buckets))
-        x[buckets - sample:] = np.array(prev)
+        x[buckets - sample:] = np.array(prev)/(n+1)
     y = get_y(graph_hist,sample)
+    y = y / (n+1)
     return x,y
 
 def max_buckets(array, buckets):
@@ -59,7 +62,7 @@ def max_buckets(array, buckets):
     return x
 
 def get_y(graph_hist,sample):
-    return max(graph_hist[sample:min(sample*2,len(graph_hist)-1)])
+    return max(graph_hist[sample:min(sample*2,len(graph_hist)-1)]) #for the last half of time this doesnt work as you are always prediciting 0 thinkin about that, we are also overfitting to stacks that run out of elements???
 
 #taken from https://www.koderdojo.com/blog/depth-first-search-in-python-recursive-and-non-recursive-programming
 def dfs_iterative(graph, start, stack):
