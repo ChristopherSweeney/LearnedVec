@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 from keras.layers import LSTM
 from keras.models import Sequential
 from keras.layers import Dense
@@ -6,14 +7,13 @@ from keras.layers import Flatten
 from keras.layers import TimeDistributed
 from keras.preprocessing.sequence import pad_sequences
 
-def build_lstm_model(train_x,train_y, batch_size=4, num_epochs=10,verbose=0):
+def build_lstm_model(buckets=10): #lstm stateful sees every element
     model = Sequential()
-    model.add(LSTM(64, activation='relu',stateful=False,return_sequences=True,input_shape=(200,1)))
+    model.add(LSTM(64, activation='relu',stateful=False,input_shape=(buckets,1)))
     # model.add(Flatten())
     model.add(Dense(1, activation='relu'))
     model.compile(loss='mse', optimizer='adam')
     print model.summary()
-    model.fit(train_x,train_y, batch_size=batch_size, epochs=num_epochs,verbose=0)
     return model
 
 #samples per graph greater than graph duration???

@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 from sklearn.svm import SVR
+import util
 
 if __name__ == '__main__':
     # # er=nx.erdos_renyi_graph(100,0.15)
@@ -23,15 +24,17 @@ if __name__ == '__main__':
         # nx.draw(graph)
         # plt.show()
         learned_stack = LearnedDynamicArray()
-        answer = dfs_iterative(graph, 1,learned_stack)
+        answer = util.dfs_iterative(graph, 1,learned_stack)
         train.append(learned_stack.history_n)
         #regress on mulitplicitve factor
         #decay factor
         #order
-    train_x,train_y,choices = create_dataset(train)
-    clf = SVR( C=1.0, epsilon=0.2)
-    clf.fit(train_x, train_y)
-    
+    train_x,train_y,choices = util.create_dataset(train)
+    # clf = SVR( C=1.0, epsilon=0.2)
+    # clf.fit(train_x, train_y)
+    clf = util.build_lstm_model(20)
+    clf.fit(train_x,train_y, batch_size=4, epochs=5,verbose=0)
+
     for i in range(5):
         predictions = clf.predict([train_x[i]])
         plt.figure()
@@ -46,7 +49,7 @@ if __name__ == '__main__':
     regular_stack = LearnedDynamicArray()
     cp = cProfile.Profile()
     cp.enable()
-    answer = dfs_iterative(graph, 1,regular_stack)
+    answer = util.dfs_iterative(graph, 1,regular_stack)
     cp.disable()
     cp.print_stats()
     plt.figure()
@@ -58,7 +61,7 @@ if __name__ == '__main__':
     learned_stack = LearnedDynamicArray(model = clf,buckets=20)
     cp = cProfile.Profile()
     cp.enable()
-    answer = dfs_iterative(graph, 1,learned_stack)
+    answer = util.dfs_iterative(graph, 1,learned_stack)
     cp.disable()
     cp.print_stats()
     plt.figure()
