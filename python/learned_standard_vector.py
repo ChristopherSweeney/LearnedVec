@@ -1,29 +1,23 @@
 import sys
 import ctypes 
-from math import sqrt
-from numpy import split
-from numpy import array
-from pandas import read_csv
-from sklearn.metrics import mean_squared_error
-from matplotlib import pyplot
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Flatten
-from keras.layers import LSTM
+import numpy as np
 
 class LearnedDynamicArray(object): 
     ''' 
     DYNAMIC ARRAY CLASS (Similar to Python List) 
     '''
       
-    def __init__(self,capacity=1,LSTM_model=None): 
+    def __init__(self,capacity=1,model=None,buckets = 10): 
         self.n = 0 # Count actual elements (Default is 0) 
         self.capacity = capacity # Default Capacity 
         self.A = self.make_array(self.capacity) 
         self.history_n=[]
         self.history_capacity=[]
-        self.LSTM_model = LSTM_model
-          
+        self.model = model
+        self.buckets = buckets
+        self.prediction_points=[]
+        self.prediction_vals=[]
+
     def __len__(self): 
         """ 
         Return number of elements sorted in array 
@@ -54,17 +48,52 @@ class LearnedDynamicArray(object):
         self.n-=1
         self.update_history()
         if 4*self.n < self.capacity and self.capacity>1: 
-            # halve capacity
-            self._resize(int(1/2. * self.capacity))
+            if not self.model:
+                self._resize(int(1/2. * self.capacity))
+            else:
+                horizon =self.predict_horizon()
+                if self.n >= int(horizon)+2:
+                    self._resize(1/2 * self.capacity)
+                    print "error"
+                else:
+                    self._resize(int(horizon)+2)#buffer
         return ele
-    
+
+    def predict_horizon(self):
+        history = self.history_n
+        size = len(history)
+        if size>=self.buckets:
+            bucket_size = int(size / self.buckets)
+            x = self.max_buckets(history[size%self.buckets:])
+        else:
+            x = np.zeros((self.buckets))
+            x[self.buckets - size:] = np.array(self.history_n)
+        return self.model.predict([x])
+
+    def max_buckets(self,array):
+        splits = np.split(np.array(array), self.buckets)
+        x = np.max(splits, axis=1)
+        return x
+
     def append(self, ele): 
         """ 
         Add element to end of the array 
         """
         if self.n == self.capacity: 
-            # Double capacity if not enough room 
-            self._resize(2 * self.capacity)  
+            if not self.model:
+                self._resize(2 * self.capacity)
+            else:
+                horizon = self.predict_horizon()
+                print "horizin ", horizon
+                print "capacity", self.capacity
+                print "n ", self.n
+
+                if self.n >= int(horizon)+2:
+                    self._resize(2 * self.capacity)
+                    print "error"
+                else:
+                    self._resize(int(horizon)+2)#buffer
+
         self.A[self.n] = ele # Set self.n index to element 
         self.n += 1
         self.update_history()
