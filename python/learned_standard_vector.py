@@ -9,18 +9,20 @@ class LearnedDynamicArray(object):
       
     def __init__(self,capacity=1,model=None,buckets = 10,default_resize_up = 2,default_resize_down=0.5,default_downsize_point=.25): 
         self.n = 0 # Count actual elements (Default is 0) 
-        self.capacity = capacity # Default Capacity 
+        self.capacity = capacity # Default Capacity. TODO maybe start with small constant default capacity????
         self.A = self.make_array(self.capacity) 
-        self.history_n=[]
-        self.history_capacity=[]
-        self.model = model
-        self.buckets = buckets
-        self.prediction_points=[]
-        self.prediction_vals=[]
         self.default_resize_up = default_resize_up
         self.default_resize_down=default_resize_down
         self.default_downsize_point=default_downsize_point
-
+        self.model = model
+        self.buckets = buckets
+        
+        #bookeeping
+        self.history_n=[]
+        self.history_capacity=[]
+        self.prediction_points=[]
+        self.prediction_vals=[]
+       
     def __len__(self): 
         """ 
         Return number of elements sorted in array 
@@ -60,17 +62,17 @@ class LearnedDynamicArray(object):
                 self._resize(int(self.default_resize_down * self.capacity))
             else:
                 horizon = self.predict_horizon()*self.n
-                print "horizin ", horizon
-                print "capacity", self.capacity
-                print "n ", self.n
+                # print "horizin ", horizon/self.n
+                # print "capacity", self.capacity
+                # print "n ", self.n
                 if self.capacity > int(horizon) and self.n < int(horizon): # horizon is lower
                     self._resize(int(horizon))#buffer
                 else:
                     self._resize(int(self.default_resize_down * self.capacity))
-                    print "error"
+                    # print "error"
         return ele
 
-    def predict_horizon(self):
+    def predict_horizon(self):#could save time with dyamic programming approach
         history = self.history_n
         size = len(history)
         if size>=self.buckets:
@@ -97,13 +99,13 @@ class LearnedDynamicArray(object):
                 self._resize(int(self.default_resize_up * self.capacity))
             else:
                 horizon = self.predict_horizon()*self.n
-                print "horizin ", horizon
-                print "capacity", self.capacity
-                print "n ", self.n
+                # print "horizin ", horizon/self.n
+                # print "capacity", self.capacity
+                # print "n ", self.n
 
                 if self.n >= int(horizon):
                     self._resize(int(self.default_resize_up * self.capacity))
-                    print "error"
+                    # print "error"
                 else:
                     self._resize(int(horizon))
 
