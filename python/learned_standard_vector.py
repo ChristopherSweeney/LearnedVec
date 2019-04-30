@@ -16,7 +16,8 @@ class LearnedDynamicArray(object):
         self.default_downsize_point=default_downsize_point
         self.model = model
         self.buckets = buckets
-        
+        self.operations=0
+
         #bookeeping
         self.history_n=[]
         self.history_capacity=[]
@@ -51,6 +52,7 @@ class LearnedDynamicArray(object):
         """ 
         Remove element from the end of the array 
         """
+        self.operations+=1
         if self.n<1:
             return None
         ele = self.A[self.n-1]
@@ -59,7 +61,7 @@ class LearnedDynamicArray(object):
 
         if self.n < int(self.default_downsize_point * self.capacity) and self.capacity>1: 
             if not self.model:
-                self._resize(int(self.default_resize_down * self.capacity))
+                self._resize(int(np.ceil(self.default_resize_down * self.capacity)))
             else:
                 horizon = self.predict_horizon()*self.n
                 # print "horizin ", horizon/self.n
@@ -68,7 +70,7 @@ class LearnedDynamicArray(object):
                 if self.capacity > int(horizon) and self.n < int(horizon): # horizon is lower
                     self._resize(int(horizon))#buffer
                 else:
-                    self._resize(int(self.default_resize_down * self.capacity))
+                    self._resize(int(np.ceil(self.default_resize_down * self.capacity)))
                     # print "error"
         return ele
 
@@ -94,9 +96,10 @@ class LearnedDynamicArray(object):
         """ 
         Add element to end of the array 
         """
+        self.operations+=1
         if self.n == self.capacity: 
             if not self.model:
-                self._resize(int(self.default_resize_up * self.capacity))
+                self._resize(int(np.ceil(self.default_resize_up * self.capacity)))
             else:
                 horizon = self.predict_horizon()*self.n
                 # print "horizin ", horizon/self.n
@@ -104,7 +107,7 @@ class LearnedDynamicArray(object):
                 # print "n ", self.n
 
                 if self.n >= int(horizon):
-                    self._resize(int(self.default_resize_up * self.capacity))
+                    self._resize(int(np.ceil(self.default_resize_up * self.capacity)))
                     # print "error"
                 else:
                     self._resize(int(horizon))
@@ -120,6 +123,8 @@ class LearnedDynamicArray(object):
         """
           
         B = self.make_array(new_cap) # New bigger array 
+        self.operations+=self.n
+
         for k in range(self.n): # Reference all existing values 
             B[k] = self.A[k] 
               

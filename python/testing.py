@@ -28,7 +28,7 @@ if __name__ == '__main__':
     stacks_cap = []
     ##################################Create Training Data####################################
     for i in range(num_graphs):
-        graph = nx.erdos_renyi_graph(100,0.15)
+        graph = nx.watts_strogatz_graph(1000,3,0.1)
         learned_stack = LearnedDynamicArray()
         answer = util.dfs_iterative(graph, 1,learned_stack)
         train.append(learned_stack.history_n)
@@ -62,9 +62,9 @@ if __name__ == '__main__':
         plt.show()
 
     ##################################Compare to model with no ML####################################
-    graph = nx.erdos_renyi_graph(1000,0.15)
+    graph = nx.watts_strogatz_graph(3000,3,0.1)
     print "----------------------------testing regular stack----------------------------"
-    regular_stack = LearnedDynamicArray() #with no model, this is just a regular dynamic array
+    regular_stack = LearnedDynamicArray(default_resize_up = 2) #with no model, this is just a regular dynamic array
     cp = cProfile.Profile()
     cp.enable()
     answer = util.dfs_iterative(graph, 1,regular_stack)
@@ -74,6 +74,9 @@ if __name__ == '__main__':
     ps = pstats.Stats(cp, stream=s).sort_stats(sortby)   
     ps.print_stats('resize|predict_horizon|pop|append')
     print s.getvalue() 
+
+    print "regualr stack num total operations ", regular_stack.operations
+
 
     reg_wasted_memory = np.array(regular_stack.history_capacity)- np.array(regular_stack.history_n)
     print "total wasted memory units: ", np.sum(reg_wasted_memory)
@@ -97,6 +100,8 @@ if __name__ == '__main__':
     ps.print_stats('resize|predict_horizon|pop|append')
     print s.getvalue()
 
+    print "learned stack num total operations ", learned_stack.operations
+
     learned_wasted_memory = np.array(learned_stack.history_capacity)- np.array(learned_stack.history_n)
     print "total wasted memory units: ", np.sum(learned_wasted_memory)
     print "average wasted memory units: ", np.mean(learned_wasted_memory)
@@ -105,8 +110,9 @@ if __name__ == '__main__':
 
 
     print "--------------------------comparison--------------------------"
+    print "relative operations" , learned_stack.operations/float(regular_stack.operations)
+
     print "relative memory wasted" , np.sum(learned_wasted_memory)/float(np.sum(reg_wasted_memory))
-    print "relative average wasted memory units: ", np.mean(learned_wasted_memory)/float(np.mean(reg_wasted_memory))
     print "relative max wasted memory units: ", np.max(learned_wasted_memory)/float(np.max(reg_wasted_memory))
     print "relative max memory capacity units: ", np.max(learned_stack.history_capacity)/float(np.max(regular_stack.history_capacity))
     plt.figure()

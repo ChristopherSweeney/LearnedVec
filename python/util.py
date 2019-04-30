@@ -35,15 +35,16 @@ def convert_training_graph_history(graph_hist,buckets,look_ahead_rate,num_sample
     x = np.zeros((num_samples,buckets))
     indicies = np.random.choice(np.arange(len(graph_hist))[1:],num_samples,replace=False) #must have more data than samples
     for i,sample in enumerate(indicies):
-        x_1,y_1 = convert_training_sample(graph_hist,sample,buckets,look_ahead_rate)
+        x_1 = convert_training_sample_x(graph_hist,sample,buckets)
+        y_1 = convert_training_sample_y(graph_hist,sample,look_ahead_rate)
         x[i,:] = x_1
         y[i] = y_1
     return x,y,indicies
 
 # per sample
-def convert_training_sample(graph_hist,sample,buckets,look_ahead_rate):
+def convert_training_sample_x(graph_hist,sample,buckets):
     prev = graph_hist[:sample]
-    x,y = None,None
+    x = None
     n = float(graph_hist[sample])
     #edge case where index is 0 and n is 0
     #there are enough samples to populate buckets. TODO use DP to speed up max_buckets   
@@ -56,9 +57,13 @@ def convert_training_sample(graph_hist,sample,buckets,look_ahead_rate):
     else:
         x = np.zeros((buckets))
         x[buckets - sample:] = np.array(prev)/(n+1) #is this the right thing to do?
+    return x
+
+def convert_training_sample_y(graph_hist,sample,look_ahead_rate):
+    n = float(graph_hist[sample])
     y = get_y(graph_hist,sample,look_ahead_rate)
     y = y / (n+1)
-    return x,y
+    return y
 
 def max_buckets(array, buckets):
     splits = np.split(np.array(array), buckets)
