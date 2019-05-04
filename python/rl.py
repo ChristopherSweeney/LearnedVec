@@ -8,21 +8,34 @@ from learned_standard_vector import LearnedDynamicArray
 
 
 class Environment(object):     
-		def __init__(self, graph, start, capacity=1, buckets = 10): 
-				self.n = 0 # Count actual elements (Default is 0) 
+		def __init__(self, capacity=1, graph = None, buckets = 10,lamb = .5): 
 				self.capacity = capacity # Default Capacity. TODO maybe start with small constant default capacity????
-				self.operations=0
-
 				self.buckets = buckets
+				self.lamb = lamb
+				# Make similar to openai env
+				self.observation_space = np.zeros(self.buckets)
+				self.action_space_size = 10 # arbitrarilty discretized actionspace
+
+				self.reset()
+
+				self.graph = graph
+
+		def reset(self):
+				self.n = 0 # Count actual elements (Default is 0) 
 				self.A = self.make_array(self.capacity) 
+				self.capacity = 1 # Default Capacity. TODO maybe start with small constant default capacity????
+				self.operations=0
 
 				#bookeeping
 				self.history_n=[]
 				self.history_capacity=[]
+				self.last_action_index=0
+				self.last_operation = 0
 
 				# setup DFS
-				self.graph = graph
-				self.start = start
+				self.sizing_regime= 'U'
+				self.graph = nx.complete_graph(100)   #nx.watts_strogatz_graph(1000,3,0.1)#graph if graph else nx.watts_strogatz_graph(1000,3,0.1)
+				self.start = 1
 				self.path = []
 				self.append(self.start) #capacity starts at 1
 				self.neighbors_to_add = []
@@ -45,17 +58,24 @@ class Environment(object):
 				return self.A[k] # Retrieve from the array at index k 
 		
 		def _reward(self):
-			"""
-			Return reward
-			"""
-			pass
+			hist_n = np.array(self.history_n[self.last_action_index:])
+			cap_n = np.array(self.history_capacity[self.last_action_index:])
+			mem_term = np.sum(cap_n-hist_n)
+			# upper_bound_navie = np.sum(cap_n-np.repeat(self.history_n[self.last_action_index],len(hist_n)))
+			# return upper_bound_navie-mem_term/(self.n*float(len(hist_n)))
+			num_operations = (self.operations-self.last_operation)
+			# print mem_term, num_operations
+			return -((1-self.lamb)*mem_term + self.lamb*num_operations)
 
 		def observation(self):
 			"""
 			Return state we want the agent to use to make a prediction
 			"""
+			# print self.n
 			while self.n>0 or self.first_loop:
 				if self.n < int(.25 * self.capacity) and self.capacity>1: 
+					# print "downsize"
+					self.sizing_regime='D'
 					return util.convert_training_sample_x(self.history_n,self.history_n[-1],self.buckets)
 						#finished adding neighbors
 				no_neighbors_left = len(self.neighbors_to_add)==0
@@ -64,11 +84,13 @@ class Environment(object):
 					if vertex in self.path: #change to hash table???
 						continue
 					self.path.append(vertex)
-				self.neighbors_to_add =self.neighbors_to_add if not no_neighbors_left else [i for i in nx.all_neighbors(graph,vertex)][::-1]
+				self.neighbors_to_add =self.neighbors_to_add if not no_neighbors_left else [i for i in nx.all_neighbors(self.graph,vertex)][::-1]
 				num_neighbors = len(self.neighbors_to_add)
 				for i in range(num_neighbors):
 					if self.n == self.capacity: 
 								#agent needs to resize up
+						# print "upsize"
+						self.sizing_regime='U'
 						return util.convert_training_sample_x(self.history_n,self.history_n[-1],self.buckets)
 					neighbor = self.neighbors_to_add.pop()
 					self.append(neighbor)
@@ -86,8 +108,14 @@ class Environment(object):
 			# Return reward
 			return self._reward()
 
-		def reset(self):
-			pass
+		def step(self, action):
+			self.last_operation = self.operations
+			self.action(action)
+			self.last_action_index = len(self.history_n)-1
+			obs = self.observation()
+			rew = self._reward()
+			done = self.n == 0 and not self.first_loop
+			return obs,rew, done
 
 		def update_history(self):
 				self.history_n.append(self.n)
@@ -137,13 +165,14 @@ class Environment(object):
 		def get_state(self):
 			print self.capacity,self.n,self.operations
 
+		def get_graph(self):
+				return self.graph
 
 if __name__ == '__main__':
 	graph = nx.watts_strogatz_graph(1000,3,0.1)
-	start = 1
 	buckets = 10
-	en = Environment(graph, start, buckets = buckets)
-	for i in range(100):
+	en = Environment(buckets = buckets,graph=graph)
+	for i in range(50):
 		step = en.observation()
 		print step
 
@@ -159,8 +188,6 @@ if __name__ == '__main__':
 	plt.plot(en.history_n)
 	plt.plot(en.history_capacity)
 	plt.show()
-
-
 
 	print "----------------------------testing regular stack----------------------------"
 	regular_stack = LearnedDynamicArray(default_resize_up = 2) #with no model, this is just a regular dynamic array
