@@ -8,7 +8,7 @@ from learned_standard_vector import LearnedDynamicArray
 
 
 class Environment(object):     
-		def __init__(self, capacity=1, graph = None, buckets = 10,lamb = .5): 
+		def __init__(self, capacity=1, graph = None, buckets = 20,lamb = .5): 
 				self.capacity = capacity # Default Capacity. TODO maybe start with small constant default capacity????
 				self.buckets = buckets
 				self.lamb = lamb
@@ -65,7 +65,13 @@ class Environment(object):
 			# return upper_bound_navie-mem_term/(self.n*float(len(hist_n)))
 			num_operations = (self.operations-self.last_operation)
 			# print mem_term, num_operations
-			return -((1-self.lamb)*mem_term + self.lamb*num_operations)
+			# print "mem wasted: ",mem_term
+			# print "operations: ",num_operations
+			n = float(len(hist_n))
+			return ((1-self.lamb)*num_operations-(self.lamb*num_operations))/n
+
+			# print mem_term/float(len(hist_n))
+			# return -mem_term/float(len(hist_n))
 
 		def observation(self):
 			"""
@@ -106,7 +112,6 @@ class Environment(object):
 			self._resize(int(np.ceil(self.capacity * resize_rate)))
 			# Continue the dfs until another action is needed
 			# Return reward
-			return self._reward()
 
 		def step(self, action):
 			self.last_operation = self.operations

@@ -2,8 +2,20 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-
+from tensorflow.python.ops import rnn, rnn_cell
 from rl import Environment
+
+def lstm(x):
+    n_classes = 10
+    rnn_size = 4
+    layer = {'weights':tf.Variable(tf.random_normal([rnn_size,n_classes])),
+             'biases':tf.Variable(tf.random_normal([n_classes]))}
+
+    x = tf.expand_dims(x, 2)
+    lstm_cell = rnn_cell.BasicLSTMCell(rnn_size,state_is_tuple=True)
+    outputs, states = rnn.static_rnn(lstm_cell,  tf.unstack(tf.transpose(x, perm=[1, 0, 2])), dtype=tf.float32)
+    output = tf.matmul(outputs[-1],layer['weights']) + layer['biases']
+    return output
 
 def mlp(x, sizes, activation=tf.tanh, output_activation=None):
     # Build a feedforward neural network.
@@ -16,14 +28,16 @@ def train(env, hidden_sizes=[32], lr=1e-2,
 
     # make environment, check spaces, get obs / act dims
     # Note, this only works for continuous observation space, discrete action space
+    tf.reset_default_graph()
 
     obs_dim = env.observation_space.shape[0]
     n_acts = env.action_space_size
-    action_index = np.linspace(1.01,2,n_acts)
+    action_index = np.linspace(1.01,5,n_acts)
 
     # make core of policy network
     obs_ph = tf.placeholder(shape=(None, obs_dim), dtype=tf.float32)
     logits = mlp(obs_ph, sizes=hidden_sizes+[n_acts])
+    # logits = lstm(obs_ph)
 
     # make action selection op (outputs int actions, sampled from policy)
     actions = tf.squeeze(tf.multinomial(logits=logits,num_samples=1), axis=1)
@@ -65,12 +79,14 @@ def train(env, hidden_sizes=[32], lr=1e-2,
 
                 act = action_index[sess.run(actions, {obs_ph: obs.reshape(1,-1)})[0]-1]
                 obs, rew, done = env.step(act)
+                # print "resize up"
                 # save action, reward
                 batch_acts.append(act)
                 ep_rews.append(rew)
             else:
                 act = .5
                 obs, rew, done = env.step(act)
+                # print "resize down"
 
             # print "action taken: ", act
            
@@ -130,15 +146,44 @@ def train(env, hidden_sizes=[32], lr=1e-2,
 if __name__ == '__main__':
     graph = nx.complete_graph(100)
 
-    for i in np.linspace(0,1,10):
+    wasted_mem=[]
+    operations = []
+    lambdas = np.linspace(0,1,10)
+    for i in lambdas:
         print "testing lamb = ", i
         env = Environment(lamb = i)
-        train(env=env,epochs=100,batch_size=20,test_graph = graph)
-        plt.figure()
-        plt.plot(env.history_n)
-        plt.plot(env.history_capacity)
-        plt.ylim(0,8000)
-        plt.show()
+        train(env=env,epochs=20,batch_size=60,test_graph = graph)
+        # plt.figure()
+        # plt.plot(env.history_n)
+        # plt.plot(env.history_capacity)
+        # plt.ylim(0,8000)
+        # plt.show()
+        wasted_mem.append(np.sum(np.array(env.history_capacity)-np.array(env.history_n)))
+        operations.append(env.operations)
+
+    fig, ax = plt.subplots()
+    ax.scatter(wasted_mem,operations)
+    for i, txt in enumerate(lambdas):
+        ax.annotate(txt, (wasted_mem[i], operations[i]))
+
+    ax.set_xlabel("wasted memory")
+    ax.set_ylabel("operations")
+    ax.set_xlim(0, 1e8)
+    ax.set_ylim(0, 1000000)
+
+    en = Environment()
+    en.reset()
+    for i in range(20):
+        step = en.observation()
+        if not step is None:
+            if en.capacity==en.n:
+                en.action(2)
+            else:
+                en.action(.5)
+        else:
+            print "finished graph"
+    ax.scatter(np.sum(np.array(en.history_capacity)-np.array(en.history_n)),en.operations,color = 'g')
+    plt.show()
 
         # en = Environment(graph=env.get_graph())
         # for i in range(50):
