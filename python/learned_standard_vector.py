@@ -111,6 +111,7 @@ class LearnedDynamicArray(object):
                     # print "error"
                 else:
                     self._resize(int(horizon))
+                    print int(horizon)
 
         self.A[self.n] = ele # Set self.n index to element 
         self.n += 1

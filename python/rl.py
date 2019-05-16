@@ -8,7 +8,7 @@ from learned_standard_vector import LearnedDynamicArray
 
 
 class Environment(object):     
-		def __init__(self, capacity=1, graph = None, buckets = 20,lamb = .5): 
+		def __init__(self, capacity=1, graph = None, buckets = 20,lamb = .5, gamma = 1.5): 
 				self.capacity = capacity # Default Capacity. TODO maybe start with small constant default capacity????
 				self.buckets = buckets
 				self.lamb = lamb
@@ -19,6 +19,7 @@ class Environment(object):
 				self.reset()
 
 				self.graph = graph
+				self.gamma = gamma
 
 		def reset(self):
 				self.n = 0 # Count actual elements (Default is 0) 
@@ -34,8 +35,10 @@ class Environment(object):
 
 				# setup DFS
 				self.sizing_regime= 'U'
-				self.graph = nx.complete_graph(100)   #nx.watts_strogatz_graph(1000,3,0.1)#graph if graph else nx.watts_strogatz_graph(1000,3,0.1)
-				self.start = 1
+				self.graph = nx.complete_graph(100)#graph if graph else nx.watts_strogatz_graph(1000,3,0.1)
+				self.start = 0
+				while not self.graph.has_node(self.start):
+					self.graph = nx.complete_graph(100)
 				self.path = []
 				self.append(self.start) #capacity starts at 1
 				self.neighbors_to_add = []
@@ -61,6 +64,8 @@ class Environment(object):
 			hist_n = np.array(self.history_n[self.last_action_index:])
 			cap_n = np.array(self.history_capacity[self.last_action_index:])
 			mem_term = np.sum(cap_n-hist_n)
+			last_n = self.history_n[self.last_action_index]
+			operations = len(self.history_n[-1]) - self.last_action_index
 			# upper_bound_navie = np.sum(cap_n-np.repeat(self.history_n[self.last_action_index],len(hist_n)))
 			# return upper_bound_navie-mem_term/(self.n*float(len(hist_n)))
 			num_operations = (self.operations-self.last_operation)
@@ -68,8 +73,10 @@ class Environment(object):
 			# print "mem wasted: ",mem_term
 			# print "operations: ",num_operations
 			n = float(len(hist_n))
-			return ((1-self.lamb)*num_operations-(self.lamb*num_operations))/n
-
+			# return ((1-self.lamb)*num_operations-(self.lamb*num_operations))/n
+			# return ((1-self.lamb)*num_operations-(self.lamb*num_operations))
+			return -((1-self.lamb)*last_n+(self.lamb*mem_term))
+			# return num_operations
 			# print mem_term/float(len(hist_n))
 			# return -mem_term/float(len(hist_n))
 
@@ -79,7 +86,7 @@ class Environment(object):
 			"""
 			# print self.n
 			while self.n>0 or self.first_loop:
-				if self.n < int(.25 * self.capacity) and self.capacity>1: 
+				if self.n < int((1./self.gamma)**2 * self.capacity) and self.capacity>1: 
 					# print "downsize"
 					self.sizing_regime='D'
 					return util.convert_training_sample_x(self.history_n,self.history_n[-1],self.buckets)
